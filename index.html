@@ -9,7 +9,7 @@
 @media(max-width:450px){header{padding:calc(8px + env(safe-area-inset-top)) 12px 8px}h1{font-size:18px}.sub{font-size:11px}.tabs{top:52px}.tabs button{font-size:11px;padding:9px 2px}.page{padding:8px}.card{padding:10px;margin-bottom:8px}.row{gap:6px}.squadrow{grid-template-columns:1fr}.seg button{flex:1}.grid{grid-template-columns:1fr 1fr}.players{min-height:0}#live .card:first-child{position:sticky;top:88px;z-index:1;padding:7px 10px}#live .clock{font-size:38px;line-height:1;margin:4px}#live .period{font-size:13px}#live #realClock{font-size:11px}#live #controls{padding:8px}#live .events{gap:6px}#live .events button{min-height:44px;font-size:14px}#live #half,#live #resume,#live #finish{margin-top:7px!important;padding:11px}#live .card:last-child h3{margin:4px 0 8px}}
 </style></head>
 <body>
-<header><h1>⚽ Match Notes</h1><div class="sub">Chronologie match & repères GPS · v13</div></header>
+<header><h1>⚽ Match Notes</h1><div class="sub">Chronologie match & repères GPS · v14</div></header>
 <nav class="tabs"><button data-tab="setup" class="on">Avant-match</button><button data-tab="live">Match</button><button data-tab="summary">Résumé</button><button data-tab="history">Historique</button></nav>
 
 <section id="setup" class="page on">
@@ -32,6 +32,7 @@
 
 <dialog id="dialog"><form method="dialog" style="min-width:min(88vw,420px)"><h3 id="dlgTitle"></h3><div id="dlgBody"></div><div class="row"><button class="secondary" type="button" id="dlgCancel">Annuler</button><button class="primary" type="button" id="dlgSave">Enregistrer</button></div></form></dialog>
 
+<script>document.documentElement.dataset.jsboot='1';</script>
 <script>
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const KEY='matchNotesDataV1';
@@ -56,7 +57,7 @@ $('#newPlayer').onkeydown=e=>{if(e.key==='Enter')$('#addPlayer').click()};
 function now(){return Date.now()} function fmt(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
 function stateTime(){if(!m)return {display:0,cumulative:0,periodElapsed:0};let pe=m.running?(now()-m.periodStart)/1000:m.periodElapsed;let display=(m.period===2?2700:0)+pe;return{display,cumulative:(m.period===2?m.firstHalfSec:0)+pe,periodElapsed:pe}}
 function footballLabel(sec){let min=Math.floor(sec/60),ss=Math.floor(sec%60);if(sec>=2700&&sec<5400)return fmt(sec);if(sec>=5400)return '90+'+Math.floor((sec-5400)/60)+':'+String(ss).padStart(2,'0');if(sec>=2700)return '45+'+Math.floor((sec-2700)/60)+':'+String(ss).padStart(2,'0');return fmt(sec)}
-function minuteLabel(sec){if(sec<2700)return (Math.floor(sec/60)+1)+"'";if(m&&m.period===1)return "45+"+(Math.floor((sec-2700)/60)+1)+"'";if(sec<5400)return (Math.floor(sec/60)+1)+"'";return "90+"+(Math.floor((sec-5400)/60)+1)+"'"}
+function minuteLabel(sec){if(sec<2700)return (Math.floor(sec/60)+1)+"'";if(m && m.period===1)return "45+"+(Math.floor((sec-2700)/60)+1)+"'";if(sec<5400)return (Math.floor(sec/60)+1)+"'";return "90+"+(Math.floor((sec-5400)/60)+1)+"'"}
 function tick(){if(!m)return;let t=stateTime();$('#clock').textContent=footballLabel(t.display);$('#realClock').textContent=new Date().toLocaleTimeString('fr-FR');}
 function log(type,text){let t=stateTime();m.events.push({type,text,period:m.period,periodElapsed:t.periodElapsed,footballSec:t.display,cumulativeSec:t.cumulative,real:new Date().toLocaleTimeString('fr-FR')});renderTimeline()}
 function renderTimeline(){let h=(m&&m.events||[]).slice().reverse().map(e=>'<div class="event"><b>'+footballLabel(e.footballSec)+'</b> '+esc(e.text)+'<div class="muted">'+e.real+' · temps joué '+fmt(e.cumulativeSec)+'</div></div>').join('');$('#liveTimeline').innerHTML=h||'<span class="muted">Aucun événement</span>'}
@@ -73,7 +74,7 @@ function askEvent(kind){let title='',body='',saveFn;
 $('[data-event]').forEach(b=>b.onclick=()=>{if(!m||!m.running)return;if(b.dataset.event==='marker')log('marker','📍 Marqueur');else askEvent(b.dataset.event)});
 $('#finish').onclick=()=>{if(!m||m.finishedAt)return;let t=stateTime();m.periodElapsed=t.periodElapsed;m.running=false;log('finish','Fin du match');clearInterval(timer);let end=(m.firstHalfSec+m.periodElapsed);m.onField.forEach(id=>{let ints=m.intervals[id]||[];if(ints.length&&ints[ints.length-1].end==null)ints[ints.length-1].end=end});m.totalPlayedSec=end;m.finishedAt=new Date().toISOString();m.saved=true;db.history.unshift(JSON.parse(JSON.stringify(m)));save();renderSummary();tab('summary')};
 function renderSummary(){if(!m)return;$('#summaryTitle').textContent='Résumé · '+esc(m.opponent);$('#stats').innerHTML='<div class="stat"><strong>'+fmt(m.firstHalfSec)+'</strong>1re MT</div><div class="stat"><strong>'+fmt(m.periodElapsed)+'</strong>2e MT</div><div class="stat"><strong>'+m.events.length+'</strong>événements</div>';
- $('#playingTimes').innerHTML=m.players.map(p=>{let s=(m.intervals[p.id]||[]).reduce((a,x)=>a+((x.end==null?m.totalPlayedSec:x.end)-x.start),0);return '<div class="player"><span>'+esc(p.name)+'</span><b>'+fmt(s)+'</b></div>'}).join('');
+ $('#playingTimes').innerHTML=m.players.map(p=>{let s=(m.intervals[p.id]||[]).reduce((a,x)=>a+(((x.end==null)?m.totalPlayedSec:x.end)-x.start),0);return '<div class="player"><span>'+esc(p.name)+'</span><b>'+fmt(s)+'</b></div>'}).join('');
  $('#summaryTimeline').innerHTML=m.events.map(e=>'<div class="event"><b>'+footballLabel(e.footballSec)+'</b> '+esc(e.text)+' <span class="muted">('+e.real+' · joué '+fmt(e.cumulativeSec)+')</span></div>').join('')}
 $('#copy').onclick=async()=>{let txt=m.events.map(e=>footballLabel(e.footballSec)+' | '+e.real+' | '+e.text).join('\n');try{await navigator.clipboard.writeText(txt);alert('Timeline copiée.')}catch{prompt('Copie la timeline :',txt)}};
 $('#newMatch').onclick=()=>{if(!m||confirm('Préparer un nouveau match ? Le match terminé reste dans l’historique.')){clearInterval(timer);m=null;$('#opponent').value='';$('#venue').value='Domicile';$('#period').textContent='Match non démarré';$('#clock').textContent='00:00';$('#liveTimeline').innerHTML='<span class="muted">Aucun événement</span>';$('#start').classList.remove('hidden');$('#eventButtons').classList.add('hidden');$('#half').classList.add('hidden');$('#resume').classList.add('hidden');$('#finish').classList.add('hidden');renderSquad();tab('setup');window.scrollTo(0,0)}};
