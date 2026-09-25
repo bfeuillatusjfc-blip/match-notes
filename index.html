@@ -36,6 +36,8 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const KEY='matchNotesDataV1';
 let db=JSON.parse(localStorage.getItem(KEY)||'{"squad":[],"history":[]}');
+const DEFAULT_SQUAD=['Fawzi','Dimitri','Faycal','PA','Gaylord','Paul','Tom','Elias','Kamel','Memel','Ismaila','Enzo','Sébastien','Larry','Hugo','Mathias','Jonathan','Andréa','Alex','Maxime','Rayan','Isaiah','Roman'];
+if(!db.squad.length){db.squad=DEFAULT_SQUAD.map((name,i)=>({id:'default-'+i,name,status:'starter'}));localStorage.setItem(KEY,JSON.stringify(db))}
 let m=null,timer=null;
 const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
 function tab(id){$$('.page,.tabs button').forEach(x=>x.classList.remove('on')); $('#'+id).classList.add('on'); $('[data-tab="'+id+'"]').classList.add('on'); if(id==='history')renderHistory();if(id==='live')window.scrollTo(0,0)}
