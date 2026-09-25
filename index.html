@@ -38,7 +38,7 @@ const KEY='matchNotesDataV1';
 let db=JSON.parse(localStorage.getItem(KEY)||'{"squad":[],"history":[]}');
 let m=null,timer=null;
 const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
-function tab(id){$('.page,.tabs button').forEach(x=>x.classList.remove('on')); $('#'+id).classList.add('on'); $('[data-tab="'+id+'"]').classList.add('on'); if(id==='history')renderHistory();if(id==='live')window.scrollTo(0,0)}
+function tab(id){$$('.page,.tabs button').forEach(x=>x.classList.remove('on')); $('#'+id).classList.add('on'); $('[data-tab="'+id+'"]').classList.add('on'); if(id==='history')renderHistory();if(id==='live')window.scrollTo(0,0)}
 $$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function normalizeSquad(){db.squad.forEach(p=>{if(!p.status)p.status=p.starter===false?'bench':'starter'});save()}
@@ -65,7 +65,7 @@ function askEvent(kind){let title='',body='',saveFn;
  else{title='Note';body='<textarea id="noteText" placeholder="Note rapide"></textarea>';saveFn=()=>log('note',$('#noteText').value.trim()||'Note')}
  $('#dlgTitle').textContent=title;$('#dlgBody').innerHTML=body;$('#dialog').showModal();$('#dlgSave').onclick=()=>{saveFn();$('#dialog').close()}
 $('#dlgCancel').onclick=()=>$('#dialog').close();
-$('[data-event]').forEach(b=>b.onclick=()=>{if(!m||!m.running)return;if(b.dataset.event==='marker')log('marker','📍 Marqueur');else askEvent(b.dataset.event)});
+$$('[data-event]').forEach(b=>b.onclick=()=>{if(!m||!m.running)return;if(b.dataset.event==='marker')log('marker','📍 Marqueur');else askEvent(b.dataset.event)});
 $('#finish').onclick=()=>{if(!m||m.finishedAt)return;let t=stateTime();m.periodElapsed=t.periodElapsed;m.running=false;log('finish','Fin du match');clearInterval(timer);let end=(m.firstHalfSec+m.periodElapsed);m.onField.forEach(id=>{let ints=m.intervals[id]||[];if(ints.length&&ints[ints.length-1].end==null)ints[ints.length-1].end=end});m.totalPlayedSec=end;m.finishedAt=new Date().toISOString();m.saved=true;db.history.unshift(JSON.parse(JSON.stringify(m)));save();renderSummary();tab('summary')};
 function renderSummary(){if(!m)return;$('#summaryTitle').textContent='Résumé · '+esc(m.opponent);$('#stats').innerHTML='<div class="stat"><strong>'+fmt(m.firstHalfSec)+'</strong>1re MT</div><div class="stat"><strong>'+fmt(m.periodElapsed)+'</strong>2e MT</div><div class="stat"><strong>'+m.events.length+'</strong>événements</div>';
  $('#playingTimes').innerHTML=m.players.map(p=>{let s=(m.intervals[p.id]||[]).reduce((a,x)=>a+((x.end??m.totalPlayedSec)-x.start),0);return '<div class="player"><span>'+esc(p.name)+'</span><b>'+fmt(s)+'</b></div>'}).join('');
