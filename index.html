@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest"><title>Match Notes</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f3f4f6}*{box-sizing:border-box}body{margin:0}header{background:#111827;color:white;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;position:sticky;top:0;z-index:3}h1{font-size:20px;margin:0}.sub{font-size:12px;opacity:.75}.tabs{display:flex;background:white;position:sticky;top:64px;z-index:2;border-bottom:1px solid #ddd}.tabs button{flex:1;border:0;background:white;padding:12px 4px;font-weight:700;font-size:12px}.tabs button.on{border-bottom:3px solid #111827}.page{display:none;padding:14px;max-width:700px;margin:auto}.page.on{display:block}.card{background:white;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 4px #0001}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:11px;border:1px solid #d1d5db;border-radius:10px;margin:5px 0 10px}button{cursor:pointer}.primary{width:100%;padding:13px;border:0;border-radius:11px;background:#111827;color:white;font-weight:800}.secondary{padding:9px 11px;border:1px solid #d1d5db;background:white;border-radius:9px}.danger{background:#991b1b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.players{min-height:100px}.player{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee;padding:8px 0}.player button{font-size:12px}.clock{text-align:center;font-size:50px;font-weight:800;font-variant-numeric:tabular-nums;margin:8px}.period{text-align:center;font-weight:700;color:#6b7280}.events{display:grid;grid-template-columns:1fr 1fr;gap:9px}.events button{min-height:55px;border:0;border-radius:12px;background:white;box-shadow:0 1px 4px #0002;font-weight:800}.events .marker{grid-column:1/-1;background:#dbeafe}.timeline{font-size:14px}.event{padding:9px 0;border-bottom:1px solid #eee}.event b{display:inline-block;min-width:58px}.muted{color:#6b7280;font-size:12px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.stat{background:#f3f4f6;border-radius:10px;padding:9px}.stat strong{display:block;font-size:18px}.hidden{display:none}.row{display:flex;gap:8px}.row>*{flex:1}@media(max-width:450px){.grid{grid-template-columns:1fr}.clock{font-size:44px}}
+</style></head>
+<body>
+<header><h1>⚽ Match Notes</h1><div class="sub">Chronologie match & repères GPS</div></header>
+<nav class="tabs"><button data-tab="setup" class="on">Avant-match</button><button data-tab="live">Match</button><button data-tab="summary">Résumé</button><button data-tab="history">Historique</button></nav>
+
+<section id="setup" class="page on">
+<div class="card"><h3>Match</h3><input id="opponent" placeholder="Adversaire"><select id="venue"><option>Domicile</option><option>Extérieur</option><option>Terrain neutre</option></select></div>
+<div class="card"><h3>Effectif</h3><div class="row"><input id="newPlayer" placeholder="Prénom du joueur"><button class="secondary" id="addPlayer">Ajouter</button></div><div class="muted">Un nouveau joueur est classé titulaire par défaut.</div>
+<div class="grid"><div><h4>🟢 Titulaires (<span id="starterCount">0</span>)</h4><div id="starters" class="players"></div></div><div><h4>🪑 Remplaçants (<span id="benchCount">0</span>)</h4><div id="benchSetup" class="players"></div></div></div></div>
+<button class="primary" id="prepare">Préparer le match</button>
+</section>
+
+<section id="live" class="page">
+<div class="card"><div class="period" id="period">Match non démarré</div><div class="clock" id="clock">00:00</div><div class="muted" style="text-align:center" id="realClock"></div></div>
+<div class="card" id="controls"><button class="primary" id="start">▶ Coup d'envoi</button><div id="eventButtons" class="events hidden">
+<button data-event="sub">🔄 Remplacement</button><button data-event="goal">⚽ But</button><button data-event="yellow">🟨 Jaune</button><button data-event="red">🟥 Rouge</button><button data-event="note">📝 Note</button><button data-event="marker" class="marker">📍 Marqueur</button>
+</div><button class="primary hidden" id="half" style="margin-top:10px">⏸ Mi-temps</button><button class="primary hidden" id="resume" style="margin-top:10px">▶ Reprise</button><button class="primary danger hidden" id="finish" style="margin-top:10px">🏁 Fin du match</button></div>
+<div class="card"><h3>Timeline</h3><div id="liveTimeline" class="timeline"></div></div>
+</section>
+
+<section id="summary" class="page"><div class="card"><h3 id="summaryTitle">Résumé</h3><div id="stats" class="stats"></div></div><div class="card"><h3>Temps de jeu</h3><div id="playingTimes"></div></div><div class="card"><h3>Timeline complète</h3><div id="summaryTimeline"></div><button class="primary" id="copy" style="margin-top:12px">Copier la timeline</button></div></section>
+<section id="history" class="page"><div class="card"><h3>Historique des matchs</h3><div id="historyList"></div></div></section>
+
+<dialog id="dialog"><form method="dialog" style="min-width:min(88vw,420px)"><h3 id="dlgTitle"></h3><div id="dlgBody"></div><div class="row"><button class="secondary" value="cancel">Annuler</button><button class="primary" id="dlgSave" value="default">Enregistrer</button></div></form></dialog>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const KEY='matchNotesDataV1';
+let db=JSON.parse(localStorage.getItem(KEY)||'{"squad":[],"history":[]}');
+let m=null,timer=null;
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+function tab(id){$$('.page,.tabs button').forEach(x=>x.classList.remove('on')); $('#'+id).classList.add('on'); $('[data-tab="'+id+'"]').classList.add('on'); if(id==='history')renderHistory()}
+$$('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderSquad(){let a=db.squad.filter(p=>p.starter),b=db.squad.filter(p=>!p.starter); $('#starterCount').textContent=a.length;$('#benchCount').textContent=b.length;
+ const rows=(arr,toStarter)=>arr.map(p=>'<div class="player"><span>'+esc(p.name)+'</span><span><button class="secondary move" data-id="'+p.id+'">'+(toStarter?'← Titulaire':'→ Banc')+'</button> <button class="secondary del" data-id="'+p.id+'">×</button></span></div>').join('');
+ $('#starters').innerHTML=rows(a,false)||'<span class="muted">Aucun</span>';$('#benchSetup').innerHTML=rows(b,true)||'<span class="muted">Aucun</span>';
+ $$('.move').forEach(x=>x.onclick=()=>{let p=db.squad.find(p=>p.id==x.dataset.id);p.starter=!p.starter;save();renderSquad()});
+ $$('.del').forEach(x=>x.onclick=()=>{db.squad=db.squad.filter(p=>p.id!=x.dataset.id);save();renderSquad()})}
+$('#addPlayer').onclick=()=>{let n=$('#newPlayer').value.trim();if(!n)return;db.squad.push({id:crypto.randomUUID(),name:n,starter:true});$('#newPlayer').value='';save();renderSquad()};
+$('#newPlayer').onkeydown=e=>{if(e.key==='Enter')$('#addPlayer').click()};
+function now(){return Date.now()} function fmt(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function stateTime(){if(!m)return {display:0,cumulative:0,periodElapsed:0};let pe=m.running?(now()-m.periodStart)/1000:m.periodElapsed;let display=(m.period===2?2700:0)+pe;return{display,cumulative:(m.period===2?m.firstHalfSec:0)+pe,periodElapsed:pe}}
+function footballLabel(sec){let min=Math.floor(sec/60),ss=Math.floor(sec%60);if(sec>=2700&&sec<5400)return fmt(sec);if(sec>=5400)return '90+'+Math.floor((sec-5400)/60)+':'+String(ss).padStart(2,'0');if(sec>=2700)return '45+'+Math.floor((sec-2700)/60)+':'+String(ss).padStart(2,'0');return fmt(sec)}
+function minuteLabel(sec){if(sec<2700)return (Math.floor(sec/60)+1)+"'";if(m?.period===1)return "45+"+(Math.floor((sec-2700)/60)+1)+"'";if(sec<5400)return (Math.floor(sec/60)+1)+"'";return "90+"+(Math.floor((sec-5400)/60)+1)+"'"}
+function tick(){if(!m)return;let t=stateTime();$('#clock').textContent=footballLabel(t.display);$('#realClock').textContent=new Date().toLocaleTimeString('fr-FR');}
+function log(type,text){let t=stateTime();m.events.push({type,text,period:m.period,periodElapsed:t.periodElapsed,footballSec:t.display,cumulativeSec:t.cumulative,real:new Date().toLocaleTimeString('fr-FR')});renderTimeline()}
+function renderTimeline(){let h=(m?.events||[]).slice().reverse().map(e=>'<div class="event"><b>'+footballLabel(e.footballSec)+'</b> '+esc(e.text)+'<div class="muted">'+e.real+' · temps joué '+fmt(e.cumulativeSec)+'</div></div>').join('');$('#liveTimeline').innerHTML=h||'<span class="muted">Aucun événement</span>'}
+$('#prepare').onclick=()=>{let starters=db.squad.filter(p=>p.starter),bench=db.squad.filter(p=>!p.starter);if(!starters.length)return alert('Ajoute au moins un titulaire.');m={id:crypto.randomUUID(),opponent:$('#opponent').value.trim()||'Adversaire',venue:$('#venue').value,players:db.squad.map(p=>({...p})),onField:starters.map(p=>p.id),bench:bench.map(p=>p.id),period:1,running:false,periodStart:null,periodElapsed:0,firstHalfSec:0,events:[],intervals:Object.fromEntries(starters.map(p=>[p.id,[{start:0,end:null}]]))};tab('live');$('#period').textContent='1re mi-temps';renderTimeline()};
+$('#start').onclick=()=>{if(!m)return;m.running=true;m.periodStart=now();log('start',"Coup d'envoi");$('#start').classList.add('hidden');$('#eventButtons').classList.remove('hidden');$('#half').classList.remove('hidden');timer=setInterval(tick,250)};
+$('#half').onclick=()=>{let t=stateTime();m.periodElapsed=t.periodElapsed;m.firstHalfSec=t.periodElapsed;m.running=false;log('half','Mi-temps');$('#period').textContent='Mi-temps';$('#eventButtons').classList.add('hidden');$('#half').classList.add('hidden');$('#resume').classList.remove('hidden');tick()};
+$('#resume').onclick=()=>{m.period=2;m.periodElapsed=0;m.periodStart=now();m.running=true;log('resume','Reprise');$('#period').textContent='2e mi-temps';$('#resume').classList.add('hidden');$('#eventButtons').classList.remove('hidden');$('#finish').classList.remove('hidden');tick()};
+function playerName(id){return m.players.find(p=>p.id===id)?.name||'?'}
+function askEvent(kind){let title='',body='',saveFn;
+ if(kind==='sub'){title='Remplacement';body='<label>Sort</label><select id="out">'+m.onField.map(id=>'<option value="'+id+'">'+esc(playerName(id))+'</option>').join('')+'</select><label>Entre</label><select id="in">'+m.bench.map(id=>'<option value="'+id+'">'+esc(playerName(id))+'</option>').join('')+'</select>';saveFn=()=>{let o=$('#out').value,i=$('#in').value;if(!o||!i)return;let t=stateTime();let ints=m.intervals[o]||[];if(ints.length)ints[ints.length-1].end=t.cumulative;m.intervals[i]=m.intervals[i]||[];m.intervals[i].push({start:t.cumulative,end:null});m.onField=m.onField.filter(x=>x!==o).concat(i);m.bench=m.bench.filter(x=>x!==i).concat(o);log('sub',playerName(o)+' → '+playerName(i))}}
+ else if(kind==='goal'||kind==='yellow'||kind==='red'){let labels={goal:'But',yellow:'Carton jaune',red:'Carton rouge'};title=labels[kind];body='<select id="who"><option value="">Choisir un joueur</option>'+m.players.map(p=>'<option value="'+p.id+'">'+esc(p.name)+'</option>').join('')+'</select>';saveFn=()=>{let id=$('#who').value;log(kind,(kind==='goal'?'⚽ ':kind==='yellow'?'🟨 ':'🟥 ')+(id?playerName(id):'Équipe'))}}
+ else{title='Note';body='<textarea id="noteText" placeholder="Note rapide"></textarea>';saveFn=()=>log('note',$('#noteText').value.trim()||'Note')}
+ $('#dlgTitle').textContent=title;$('#dlgBody').innerHTML=body;$('#dialog').showModal();$('#dlgSave').onclick=saveFn}
+$$('[data-event]').forEach(b=>b.onclick=()=>{if(b.dataset.event==='marker')log('marker','📍 Marqueur');else askEvent(b.dataset.event)});
+$('#finish').onclick=()=>{let t=stateTime();m.periodElapsed=t.periodElapsed;m.running=false;log('finish','Fin du match');clearInterval(timer);let end=(m.firstHalfSec+m.periodElapsed);m.onField.forEach(id=>{let ints=m.intervals[id]||[];if(ints.length&&ints[ints.length-1].end==null)ints[ints.length-1].end=end});m.totalPlayedSec=end;m.finishedAt=new Date().toISOString();db.history.unshift(JSON.parse(JSON.stringify(m)));save();renderSummary();tab('summary')};
+function renderSummary(){if(!m)return;$('#summaryTitle').textContent='Résumé · '+esc(m.opponent);$('#stats').innerHTML='<div class="stat"><strong>'+fmt(m.firstHalfSec)+'</strong>1re MT</div><div class="stat"><strong>'+fmt(m.periodElapsed)+'</strong>2e MT</div><div class="stat"><strong>'+m.events.length+'</strong>événements</div>';
+ $('#playingTimes').innerHTML=m.players.map(p=>{let s=(m.intervals[p.id]||[]).reduce((a,x)=>a+((x.end??m.totalPlayedSec)-x.start),0);return '<div class="player"><span>'+esc(p.name)+'</span><b>'+fmt(s)+'</b></div>'}).join('');
+ $('#summaryTimeline').innerHTML=m.events.map(e=>'<div class="event"><b>'+footballLabel(e.footballSec)+'</b> '+esc(e.text)+' <span class="muted">('+e.real+' · joué '+fmt(e.cumulativeSec)+')</span></div>').join('')}
+$('#copy').onclick=async()=>{let txt=m.events.map(e=>footballLabel(e.footballSec)+' | '+e.real+' | '+e.text).join('\n');try{await navigator.clipboard.writeText(txt);alert('Timeline copiée.')}catch{prompt('Copie la timeline :',txt)}};
+function renderHistory(){let h=db.history.map((x,i)=>'<div class="player"><span><b>'+esc(x.opponent)+'</b><div class="muted">'+new Date(x.finishedAt).toLocaleString('fr-FR')+'</div></span><button class="secondary openHistory" data-i="'+i+'">Ouvrir</button></div>').join('');$('#historyList').innerHTML=h||'<span class="muted">Aucun match enregistré.</span>';$$('.openHistory').forEach(b=>b.onclick=()=>{m=JSON.parse(JSON.stringify(db.history[+b.dataset.i]));renderSummary();tab('summary')})}
+renderSquad();tick();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js');
+</script></body></html>
